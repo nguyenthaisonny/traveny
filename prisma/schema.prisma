@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  // preferredLanguage String   @default("en") // AI Language Translation Preference
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itineraries      Itinerary[]
+  bookings         Booking[]
+  reviews          Review[]
+  ImageRecognition ImageRecognition[]
+  // Translation      Translation[]
+}
+
+model Destination {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  description String?
+  imageUrl    String?
+  aiTags      String? // AI-generated tags for recommendations
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  itineraries Itinerary[]
+  bookings    Booking[]
+  reviews     Review[]
+}
+
+model Itinerary {
+  id            String   @id @default(cuid())
+  userId        String
+  destinationId String
+  tripStart     DateTime
+  tripEnd       DateTime
+  activities    String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id              String      @id @default(cuid())
+  userId          String
+  destinationId   String
+  bookingType     BookingType
+  bookingDetails  String?
+  bookingDate     DateTime    @default(now())
+  pricePrediction Float? // AI price prediction
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  userId        String
+  destinationId String
+  rating        Int      @default(3)
+  comment       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+}
+
+model ImageRecognition {
+  id               String   @id @default(cuid())
+  userId           String
+  imageUrl         String
+  detectedLandmark String? // AI-detected landmark
+  description      String? // AI-generated description
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// model Translation {
+//   id             String   @id @default(cuid())
+//   userId         String
+//   originalText   String
+//   translatedText String?
+//   sourceLang     String
+//   targetLang     String
+//   createdAt      DateTime @default(now())
+//   updatedAt      DateTime @updatedAt
+
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+// }
+
+enum BookingType {
+  FLIGHT
+  HOTEL
+  TOUR
+}
