@@ -1,26 +1,90 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/login.dto';
-import { UpdateAuthDto } from './dto/register.dto';
-
+import { CreateUserDto } from "@/module/user/dto/create-user.dto";
+import { UserService } from "@/module/user/user.service";
+import { Injectable, BadRequestException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from '@nestjs/config';
+import * as argon2 from 'argon2';
+import { AuthDto } from "./dto/auth.dto";
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) { }
+  async signUp(createUserDto: CreateUserDto): Promise<any> {
+    // Check if user exists
+    const userExists = await this.userService.findByEmail(
+      createUserDto.email,
+    );
+    if (userExists) {
+      throw new BadRequestException('User already exists');
+    }
+
+    // Hash password
+    const hash = await this.hashData(createUserDto.password);
+    const newUser = await this.userService.create({
+      ...createUserDto,
+      password: hash,
+    });
+    const tokens = await this.getTokens(newUser.id, newUser.email);
+    await this.updateRefreshToken(newUser.id, tokens.refreshToken);
+    return tokens;
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async signIn(AuthDto: AuthDto) {
+    // Check if user exists
+    const user = await this.userService.findByEmail(AuthDto.email);
+    if (!user) throw new BadRequestException('User does not exist');
+    const passwordMatches = await argon2.verify(user.password, AuthDto.password);
+    if (!passwordMatches)
+      throw new BadRequestException('Password is incorrect');
+    const tokens = await this.getTokens(user.id, user.email);
+    await this.updateRefreshToken(user.id, tokens.refreshToken);
+    return tokens;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  async logout(userId: string) {
+    return this.userService.updateRefreshToken(userId, { refresh_token: null });
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+  hashData(data: string) {
+    return argon2.hash(data);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hashedRefreshToken = await this.hashData(refreshToken);
+    await this.userService.updateRefreshToken(userId, { refresh_token: hashedRefreshToken });
+
+  }
+
+  async getTokens(userId: string, email: string) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+          expiresIn: '15m',
+        },
+      ),
+      this.jwtService.signAsync(
+        {
+          sub: userId,
+          email,
+        },
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+          expiresIn: '7d',
+        },
+      ),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 }

@@ -5,7 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) { }
   async create(createUserDto: CreateUserDto) {
     return this.prisma.user.create({
       data: createUserDto
@@ -27,7 +27,18 @@ export class UserService {
     });
   }
 
+  updateRefreshToken(id: string, refresh_token: Object) {
+    return this.prisma.user.update({
+      data: refresh_token,
+      where: { id }
+    });
+  }
+
   remove(id: string) {
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  findByEmail(email: string) {
+    return this.prisma.user.findUnique({ where: { email } })
   }
 }
