@@ -1,15 +1,17 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, UseGuards } from '@nestjs/common';
 import { UserService } from '@/module/user/user.service';
 import { CreateUserDto } from '@/module/user/dto/create-user.dto';
 import { UpdateUserDto } from '@/module/user/dto/update-user.dto';
 import { ResponseMessage } from '@/decorators/customs';
+import { AccessTokenGuard } from '@/common/accessToken.guard';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
-  @Post()
+  @UseGuards(AccessTokenGuard)
   @ResponseMessage("Create user.")
+  @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
@@ -33,6 +35,7 @@ export class UserController {
   }
 
   @Delete(':id')
+
   @ResponseMessage("Delete user.")
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
