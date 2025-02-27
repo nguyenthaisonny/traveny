@@ -4,6 +4,7 @@ import { CreateUserDto } from '@/module/user/dto/create-user.dto';
 import { AuthDto } from './dto/auth.dto';
 import { Request } from 'express';
 import { AccessTokenGuard } from '@/common/accessToken.guard';
+import { RefreshTokenGuard } from '@/common/refreshToken.guard';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) { }
@@ -24,5 +25,13 @@ export class AuthController {
     console.log(req.user['sub']);
 
     this.authService.logout(req.user['sub']);
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Get('refresh')
+  refreshTokens(@Req() req: Request) {
+    const userId = req.user['sub'];
+    const refreshToken = req.user['refreshToken'];
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

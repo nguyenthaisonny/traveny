@@ -10,10 +10,11 @@ import { RefreshTokenStrategy } from './stragetries/refreshToken.strategy';
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     JwtModule.register({}),
     UserModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, AccessTokenStrategy], // Add AccessTokenStrategy
+  providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy], // Add AccessTokenStrategy
 })
 export class AuthModule { }
